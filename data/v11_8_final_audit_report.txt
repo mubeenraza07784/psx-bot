@@ -1,0 +1,29 @@
+PSX Bot v11.8 Final Audit Report
+
+Base audited: v11.7 Decision Index Unique Fix
+
+Checks performed:
+1. Python compile check: PASSED for all .py files
+2. app.py duplicate function definitions: None
+3. Streamlit duplicate literal keys: 0
+4. Sarmaaya Quick Import action buttons: ['1) Parse Six Sarmaaya Boxes and Save', '2) Save Quick Sarmaaya Data Into Bot', '3) Download All Fundamental Data']
+5. Direct writes to st.session_state["ai_context_text"]: 0
+6. Sarmaaya helper duplicate definitions:
+   - _load_sarmaaya_fill_table_anytime: 1
+   - _sarmaaya_full_bot_status_text: 1
+7. Fundamental modules patched:
+   - cwt_bot/fundamentals.py duplicate-column collapse: True
+   - cwt_bot/fundamental_master.py duplicate-column collapse: True
+   - cwt_bot/autopilot_manager.py safe lookup: True
+   - cwt_bot/autopilot_manager.py symbol dedupe lookup: True
+
+Targeted pandas tests:
+- duplicate symbol rows with duplicate index: PASSED
+- duplicate alias columns after Sarmaaya merge: PASSED
+- prepare_fundamentals: PASSED
+- normalize_fundamental_columns: PASSED
+- score_fundamental_universe: PASSED
+- _fundamental_lookup unique lookup: PASSED
+
+Known limitation:
+- This is a static and targeted data audit. Live PSX/Yahoo/Google/WhatsApp provider errors can still occur if internet, API, credentials, or provider service is unavailable.

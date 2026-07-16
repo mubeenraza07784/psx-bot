@@ -1,0 +1,18 @@
+[COMPILE] All Python files compile successfully.
+[APP FUNCTIONS] Duplicate function definitions: None
+[STREAMLIT KEYS] Duplicate literal keys: 0
+[ORIENT INDEX] Unsafe orient='index' patterns: 1
+[cwt_bot/fundamentals.py] _collapse_duplicate_columns present: True
+[cwt_bot/fundamental_master.py] _collapse_duplicate_columns present: True
+[cwt_bot/autopilot_manager.py] _collapse_duplicate_columns present: True
+[APP HELPER] _dedupe_symbol_rows_for_decision: 324811
+[APP HELPER] _sanitize_dataframe_for_decision_engine: 325567
+[APP HELPER] _force_object_columns: 327570
+[APP HELPER] _merge_sarmaaya_full_bot_fundamentals: 333140
+[APP HELPER] _save_sarmaaya_full_bot_wide_table: 331038
+[APP HELPER] read_fundamentals_source: 223519
+[IMPORT] FAILED: cannot import name '_safe_to_dict_index' from 'cwt_bot.autopilot_manager' (/mnt/data/psxbot_v11_6/PSX_CWT_Chart_Analysis_Bot/cwt_bot/autopilot_manager.py)
+[DATAFRAME TEST] FAILED: NameError: name '_safe_to_dict_index' is not defined
+[SESSION STATE] Direct writes to ai_context_text: 0
+[DUP SARMAAYA] _load_sarmaaya_fill_table_anytime definitions: 1
+[DUP SARMAAYA] _sarmaaya_full_bot_status_text definitions: 1
