@@ -1175,7 +1175,8 @@ def decision_center_panel() -> None:
     if fundamentals_upload is None and not str(fundamentals_sheet_url or "").strip() and has_imported_fundamental_images():
         st.info("No fundamental CSV/Sheet link is selected, so the Decision Center will use the latest Fundamental Image Import data as its fallback fundamentals source.")
 
-    with st.expander("Decision discipline settings", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Decision discipline settings")
         d1, d2, d3, d4 = st.columns(4)
         entry_gate = d1.slider("Entry gate", 40, 85, 60, 1, key="decision_center_entry_gate")
         strong_gate = d2.slider("Strong buy gate", 50, 95, 70, 1, key="decision_center_strong_gate")
@@ -2299,7 +2300,8 @@ def _investing_chart_url(symbol: str, manual_value: str = "", page_type: str = "
 
 def render_investing_live_chart(symbol: str, key_prefix: str) -> None:
     st.markdown("##### Investing.com Chart Links")
-    with st.expander("Investing.com chart options", expanded=True):
+    with st.container(border=True):
+        st.markdown("### Investing.com chart options")
         c1, c2 = st.columns([1, 1])
         page_type = c1.selectbox(
             "Investing.com page",
@@ -2726,7 +2728,8 @@ def knowledge_layer_selector_ui(key_prefix: str, default_profile: str = "Complet
     s1.metric("Selected Layers", summary["Layer Count"])
     s2.metric("Technical Layers", summary["Technical Layers"])
     s3.metric("Fundamental/Risk Layers", summary["Fundamental/Risk Layers"])
-    with st.expander("Show exactly how uploaded data will be used", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Show exactly how uploaded data will be used")
         if layers:
             st.dataframe(selected_layer_table(layers), use_container_width=True, hide_index=True)
         required = required_data_for_layers(layers)
@@ -2820,7 +2823,8 @@ def autopilot_manager_panel():
     if fundamentals_upload is None and not str(fundamentals_sheet_url or "").strip() and has_imported_fundamental_images():
         st.info("No fundamental CSV/Sheet link is selected, so Autopilot will use the latest Fundamental Image Import data as its fallback fundamentals source.")
 
-    with st.expander("Autopilot discipline controls", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Autopilot discipline controls")
         c1, c2, c3, c4 = st.columns(4)
         entry_gate = c1.slider("Entry confluence gate", 40, 85, 60, 1, key="autopilot_entry_gate")
         strong_gate = c2.slider("Strong-entry gate", 50, 95, 70, 1, key="autopilot_strong_gate")
@@ -3195,13 +3199,15 @@ def single_symbol_panel():
         volume_shortlist = st.checkbox("Volume-leader shortlist confirmed", value=False, key="pro_single_volume")
         insider_review = st.checkbox("Insider transaction context reviewed", value=False, key="pro_single_insider")
 
-    with st.expander("Risk & position sizing"):
+    with st.container(border=True):
+        st.markdown("### Risk & position sizing")
         r1, r2, r3 = st.columns(3)
         account_balance = r1.number_input("Capital / Account Value", value=100000.0, min_value=1.0, step=10000.0, key="pro_single_capital")
         risk_pct_override = r2.number_input("Risk % Override (0 = default)", value=0.0, min_value=0.0, step=0.05, key="pro_single_risk_override")
         shares_contract = r3.number_input("Contract Size (shares per unit)", value=1.0, min_value=0.000001, step=1.0, key="pro_single_contract")
 
-    with st.expander("Prediction & loss-control settings", expanded=True):
+    with st.container(border=True):
+        st.markdown("### Prediction & loss-control settings")
         p1, p2, p3, p4 = st.columns(4)
         run_prediction = p1.checkbox("Run prediction engine", value=True, key="pro_single_run_prediction")
         prediction_horizon = p2.selectbox("Forecast horizon", [3, 5, 10, 15], index=1, key="pro_single_prediction_horizon")
@@ -3611,9 +3617,11 @@ def scenario_scanner_panel():
                     use_container_width=True,
                 )
 
-            with st.expander("Show all analyzed symbols"):
+            with st.container(border=True):
+                st.markdown("### Show all analyzed symbols")
                 st.dataframe(all_df, use_container_width=True, hide_index=True) if not all_df.empty else st.write("No successful analyses.")
-            with st.expander("Show failed/unavailable symbols"):
+            with st.container(border=True):
+                st.markdown("### Show failed/unavailable symbols")
                 st.write("\n".join(failures) if failures else "No symbol-level failures.")
         except Exception as exc:
             progress.empty()
@@ -4041,7 +4049,8 @@ def divergence_finder_panel():
     else:
         st.info("Recommended fast setting: Universe = All PSX or KSE-100, Timeframe = All Timeframes, Speed mode = Fast, Type = Any Divergence, Sensitivity = Sensitive, Limit by recent candles = OFF. Then run Balanced only on shortlisted symbols.")
     if latest_failures:
-        with st.expander(f"Latest divergence failures / missing data ({len(latest_failures)})", expanded=False):
+        with st.container(border=True):
+            st.markdown("### Latest divergence failures / missing data (len(latest_failures))")
             st.dataframe(pd.DataFrame(latest_failures), use_container_width=True, hide_index=True)
 
     st.divider()
@@ -4176,7 +4185,8 @@ def divergence_finder_panel():
         st.info("Run the scan to find divergence. Recommended first test: Any Divergence + Sensitive + 220 lookback candles.")
 
     if failures:
-        with st.expander(f"Scan failures / missing data ({len(failures)})", expanded=False):
+        with st.container(border=True):
+            st.markdown("### Scan failures / missing data (len(failures))")
             st.dataframe(pd.DataFrame(failures), use_container_width=True, hide_index=True)
 
 
@@ -4291,7 +4301,8 @@ def mtf_scenario_divergence_scanner_panel():
         st.info("Run the Scenario Finder MTF scan. Recommended: All Timeframes + Any Divergence + Sensitive.")
 
     if failures:
-        with st.expander(f"Scenario scan failures / missing data ({len(failures)})", expanded=False):
+        with st.container(border=True):
+            st.markdown("### Scenario scan failures / missing data (len(failures))")
             st.dataframe(pd.DataFrame(failures), use_container_width=True, hide_index=True)
 
 
@@ -4432,7 +4443,8 @@ def pattern_scanner_panel():
                     use_container_width=True,
                 )
 
-            with st.expander("Show failed/unavailable symbols"):
+            with st.container(border=True):
+                st.markdown("### Show failed/unavailable symbols")
                 st.write("\n".join(failures) if failures else "No symbol-level failures.")
         except Exception as exc:
             progress.empty()
@@ -4519,7 +4531,8 @@ def watchlist_scorecard_panel():
                     use_container_width=True,
                 )
 
-            with st.expander("Show failed/unavailable symbols"):
+            with st.container(border=True):
+                st.markdown("### Show failed/unavailable symbols")
                 st.write("\n".join(failures) if failures else "No symbol-level failures.")
         except Exception as exc:
             progress.empty()
@@ -4780,7 +4793,8 @@ def news_and_price_hazard_watchtower_panel():
             else:
                 st.info("No structured official-event rows were parsed for the selected symbols.")
             if news.get("errors"):
-                with st.expander("Source parsing notes"):
+                with st.container(border=True):
+                    st.markdown("### Source parsing notes")
                     st.write("\n".join(news["errors"]))
         except Exception as exc:
             st.error(f"Official news/event watch failed: {exc}")
@@ -4873,7 +4887,8 @@ def news_and_price_hazard_watchtower_panel():
                 use_container_width=True,
             )
 
-        with st.expander("Show unavailable symbols"):
+        with st.container(border=True):
+            st.markdown("### Show unavailable symbols")
             st.write("\n".join(failures) if failures else "No symbol-level failures.")
 
     st.info(
@@ -5183,7 +5198,8 @@ def fundamental_image_import_center_panel() -> None:
             help="Upload a clear screenshot. The bot will attempt OCR extraction, and you can use a Google Sheet as a structured fallback if OCR is unavailable.",
         )
 
-    with st.expander("Accepted image set and data usage", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Accepted image set and data usage")
         st.markdown(
             """
             **Required image roles**  
@@ -5515,7 +5531,8 @@ def corporate_catalyst_panel():
                 else:
                     st.info("No structured official announcement rows were parsed for the selected symbols.")
                 if news.get("errors"):
-                    with st.expander("Source parsing notes"):
+                    with st.container(border=True):
+                        st.markdown("### Source parsing notes")
                         st.write("\n".join(news["errors"]))
             except Exception as exc:
                 st.error(f"Catalyst scanner failed: {exc}")
@@ -6487,7 +6504,8 @@ def fast_down_alert_scanner_panel():
 
     diagnostics = st.session_state.get("fastdown_diagnostics", [])
     if diagnostics:
-        with st.expander("Why symbols were NOT marked Fast Down", expanded=False):
+        with st.container(border=True):
+            st.markdown("### Why symbols were NOT marked Fast Down")
             diag_df = pd.DataFrame(diagnostics)
             show_cols = [c for c in [
                 "Symbol", "Alert Type", "Confirmed Fast Up", "Confirmed Fast Down", "Score", "Current Price", "Last Price",
@@ -6543,7 +6561,8 @@ def fast_down_alert_scanner_panel():
     phone = w2.text_input("WhatsApp number", value="", key="fastdown_wa_phone", help="Use country code, e.g. +923001234567")
     api_key = w3.text_input("CallMeBot API key", value="", type="password", key="fastdown_wa_callmebot_key")
 
-    with st.expander("Twilio / Custom Webhook advanced settings", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Twilio / Custom Webhook advanced settings")
         t1, t2 = st.columns(2)
         t1.text_input("Twilio Account SID", value="", key="fastdown_wa_twilio_sid")
         t2.text_input("Twilio Auth Token", value="", type="password", key="fastdown_wa_twilio_token")
@@ -6568,7 +6587,8 @@ def fast_down_alert_scanner_panel():
 
     send_logs = st.session_state.get("fastdown_wa_send_logs", [])
     if send_logs:
-        with st.expander("WhatsApp send log", expanded=True):
+        with st.container(border=True):
+            st.markdown("### WhatsApp send log")
             st.dataframe(pd.DataFrame(send_logs), use_container_width=True, hide_index=True)
 
     if rows:
@@ -6588,7 +6608,8 @@ def fast_down_alert_scanner_panel():
             )
 
     if failures:
-        with st.expander(f"Unavailable / failed symbols ({len(failures)})", expanded=False):
+        with st.container(border=True):
+            st.markdown("### Unavailable / failed symbols (len(failures))")
             st.dataframe(pd.DataFrame(failures), use_container_width=True, hide_index=True)
 
 
@@ -6755,7 +6776,8 @@ def portfolio_whatsapp_alert_watcher_panel():
     phone = w2.text_input("Your WhatsApp number", value="", key="wa_phone", help="Use country code, e.g. +923001234567")
     api_key = w3.text_input("CallMeBot API key", value="", type="password", key="wa_callmebot_key")
 
-    with st.expander("Twilio / Custom Webhook advanced settings", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Twilio / Custom Webhook advanced settings")
         t1, t2 = st.columns(2)
         account_sid = t1.text_input("Twilio Account SID", value="", key="wa_twilio_sid")
         auth_token = t2.text_input("Twilio Auth Token", value="", type="password", key="wa_twilio_token")
@@ -6856,11 +6878,13 @@ def portfolio_whatsapp_alert_watcher_panel():
         st.success("No portfolio fast up/down alerts currently shown.")
 
     if send_logs:
-        with st.expander("WhatsApp send log", expanded=True):
+        with st.container(border=True):
+            st.markdown("### WhatsApp send log")
             st.dataframe(pd.DataFrame(send_logs), use_container_width=True, hide_index=True)
 
     if failures:
-        with st.expander(f"Unavailable / failed symbols ({len(failures)})", expanded=False):
+        with st.container(border=True):
+            st.markdown("### Unavailable / failed symbols (len(failures))")
             st.dataframe(pd.DataFrame(failures), use_container_width=True, hide_index=True)
 
 
@@ -8556,7 +8580,8 @@ def sarmaaya_quick_import_no_screenshot_panel():
         st.dataframe(summary_df, use_container_width=True, hide_index=True)
 
     if isinstance(raw_df, pd.DataFrame) and not raw_df.empty:
-        with st.expander("Parsed raw Sarmaaya lines", expanded=False):
+        with st.container(border=True):
+            st.markdown("### Parsed raw Sarmaaya lines")
             st.dataframe(raw_df, use_container_width=True, hide_index=True)
 
     fill_df = st.session_state.get("sarmaaya_missing_fundamental_fill_df", pd.DataFrame())
@@ -8707,7 +8732,8 @@ def sarmaaya_data_import_center_panel():
         )
         imported = edited.copy()
 
-        with st.expander("OCR raw text by section", expanded=False):
+        with st.container(border=True):
+            st.markdown("### OCR raw text by section")
             texts = st.session_state.get("sarmaaya_ocr_texts", {})
             if texts:
                 for sec, txt in texts.items():
@@ -8797,49 +8823,65 @@ def market_technical_scanner_desk_panel() -> None:
     st.info("Fast Down Alert Scanner and Latest Divergence Scanner are direct sidebar desks only, so they do not create duplicate widget keys.")
     st.warning("Fast Down Alert Scanner is now a direct left-sidebar desk only, to avoid duplicate Streamlit widget keys. Open **Fast Down Alert Scanner** from the sidebar for 30-second WhatsApp alerts.")
     st.warning("Latest Divergence Scanner is now a direct left-sidebar desk only, to avoid duplicate Streamlit widget keys. Open **Latest Divergence Scanner** from the sidebar.")
-    with st.expander("Multi-Style Trading Desk", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Multi-Style Trading Desk")
         multi_style_trading_desk_panel()
-    with st.expander("Scenario Scanner", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Scenario Scanner")
         scenario_scanner_panel()
-    with st.expander("Pattern & Divergence Scanner", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Pattern & Divergence Scanner")
         pattern_scanner_panel()
-    with st.expander("Watchlist PRO Scorecard", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Watchlist PRO Scorecard")
         watchlist_scorecard_panel()
 
 
 def fundamental_strategy_lab_panel() -> None:
     st.subheader("Fundamental & Strategy Lab")
-    with st.expander("Fundamental Image Import Center", expanded=True):
+    with st.container(border=True):
+        st.markdown("### Fundamental Image Import Center")
         fundamental_image_import_center_panel()
-    with st.expander("Master Fundamentals", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Master Fundamentals")
         master_fundamentals_panel()
-    with st.expander("Basic Fundamentals & Rankings", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Basic Fundamentals & Rankings")
         fundamentals_panel()
-    with st.expander("Strategy Builder", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Strategy Builder")
         strategy_builder_panel()
-    with st.expander("Corporate Catalyst Scanner", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Corporate Catalyst Scanner")
         corporate_catalyst_panel()
 
 
 def risk_alerts_watchtower_panel() -> None:
     st.subheader("Risk, Alerts & Watchtower")
-    with st.expander("News & Price Hazard Watchtower", expanded=True):
+    with st.container(border=True):
+        st.markdown("### News & Price Hazard Watchtower")
         news_and_price_hazard_watchtower_panel()
-    with st.expander("Alert Center", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Alert Center")
         alert_center_panel()
-    with st.expander("Prediction & Loss Control", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Prediction & Loss Control")
         prediction_loss_control_panel()
-    with st.expander("Trade Tracker", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Trade Tracker")
         trade_tracker_panel()
 
 
 def knowledge_macro_panel() -> None:
     st.subheader("Knowledge & Macro")
-    with st.expander("Uploaded Knowledge Brain", expanded=True):
+    with st.container(border=True):
+        st.markdown("### Uploaded Knowledge Brain")
         uploaded_knowledge_brain_panel()
-    with st.expander("Macro Checklist", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Macro Checklist")
         macro_checklist_panel()
-    with st.expander("Investor Profile", expanded=False):
+    with st.container(border=True):
+        st.markdown("### Investor Profile")
         investor_profile_panel()
 
 
