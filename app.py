@@ -8886,10 +8886,11 @@ def render_workspace_panels(active_panels: list[str], layout_mode: str) -> None:
         return
 
     if layout_mode == "Accordion panels":
-        for idx, panel_name in enumerate(available_panels):
-            with st.expander(panel_name, expanded=(idx < 2)):
-                PAGE_RENDERERS[panel_name]()
-        return
+    for idx, panel_name in enumerate(available_panels):
+        with st.container(border=True):
+            st.markdown(f"## {panel_name}")
+            PAGE_RENDERERS[panel_name]()
+    return
 
     for panel_name in available_panels:
         with st.container(border=True):
