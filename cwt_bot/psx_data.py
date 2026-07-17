@@ -5,33 +5,28 @@ from io import StringIO
 import re
 import time
 
-import numpy as np
 import pandas as pd
 import requests
 
 from .data_sources import normalize_ohlcv, load_yfinance_ohlcv
 
 
-
-# Built-in fallback universe used when PSX/Yahoo closes a connection on Streamlit Cloud.
-# This is not claimed to be the latest official KSE-100 list; it is a safe starter universe
-# so the scanner keeps running even when the remote universe page is temporarily unavailable.
 FALLBACK_KSE100_SYMBOLS = [
-    "ABL","ABOT","AGP","AICL","AIRLINK","AKBL","APL","ATLH","ATRL","AVN",
-    "BAFL","BAHL","BOP","CHCC","COLG","DAWH","DGKC","EFERT","ENGROH","EPCL",
-    "FABL","FATIMA","FCEPL","FFC","FFBL","GHGL","HBL","HUBC","ILP","INDU",
-    "ISL","JDWS","JVDC","KOHC","LUCK","MARI","MCB","MEBL","MLCF","MTL",
-    "NBP","NESTLE","NRL","OGDC","PABC","PAEL","PIOC","POL","PPL","PSO",
-    "PSX","SAZEW","SEARL","SHFA","SRVI","SYS","THALL","THCCL","TRG","UBL",
-    "UNITY"
+    "ABL", "ABOT", "AGP", "AICL", "AIRLINK", "AKBL", "APL", "ATLH", "ATRL", "AVN",
+    "BAFL", "BAHL", "BOP", "CHCC", "COLG", "DAWH", "DGKC", "EFERT", "ENGROH", "EPCL",
+    "FABL", "FATIMA", "FCEPL", "FFC", "FFBL", "GHGL", "HBL", "HUBC", "ILP", "INDU",
+    "ISL", "JDWS", "JVDC", "KOHC", "LUCK", "MARI", "MCB", "MEBL", "MLCF", "MTL",
+    "NBP", "NESTLE", "NRL", "OGDC", "PABC", "PAEL", "PIOC", "POL", "PPL", "PSO",
+    "PSX", "SAZEW", "SEARL", "SHFA", "SRVI", "SYS", "THALL", "THCCL", "TRG", "UBL",
+    "UNITY",
 ]
 
 FALLBACK_ELIGIBLE_SYMBOLS = list(dict.fromkeys(FALLBACK_KSE100_SYMBOLS + [
-    "AGIL","AHCL","AHL","AICL","AKDHL","ATIL","BIFO","BNL","BWHL","CENI",
-    "CNERGY","DAWN","DCR","DYNO","EFUG","ENGROH","FCSC","FECTC","FCCL","FCEL",
-    "FLYNG","GAL","GGL","GHNI","GRR","GWLC","HPL","IMAGE","JLICL","JSGCL",
-    "LSEVL","MDTL","MCBIM","NATF","NETSOL","OTSU","PAKOXY","PNSC","POWER",
-    "PTC","PTL","RCML","SAPT","SPEL","TPLI","TGL","ZAL"
+    "AGIL", "AHCL", "AHL", "AKDHL", "ATIL", "BIFO", "BNL", "BWHL", "CENI",
+    "CNERGY", "DAWN", "DCR", "DYNO", "EFUG", "FCSC", "FECTC", "FCCL", "FCEL",
+    "FLYNG", "GAL", "GGL", "GHNI", "GRR", "GWLC", "HPL", "IMAGE", "JLICL", "JSGCL",
+    "LSEVL", "MDTL", "MCBIM", "NATF", "NETSOL", "OTSU", "PAKOXY", "PNSC", "POWER",
+    "PTC", "PTL", "RCML", "SAPT", "SPEL", "TPLI", "TGL", "ZAL",
 ]))
 
 
@@ -45,8 +40,8 @@ def find_column(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
         if key in lookup:
             return lookup[key]
 
-    def clean(s: Any) -> str:
-        return re.sub(r"[^a-z0-9]+", " ", str(s).lower()).strip()
+    def clean(value: Any) -> str:
+        return re.sub(r"[^a-z0-9]+", " ", str(value).lower()).strip()
 
     cleaned_cols = {clean(c): c for c in df.columns}
     for name in candidates:
@@ -65,10 +60,6 @@ def find_column(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
 
 
 def _smart_datetime(values: pd.Series) -> pd.Series:
-    """
-    Parse date/time values from PSX payloads.
-    Supports text dates plus Unix timestamps in seconds or milliseconds.
-    """
     numeric = pd.to_numeric(values, errors="coerce")
     numeric_ratio = numeric.notna().mean() if len(numeric) else 0
 
@@ -83,13 +74,6 @@ def _smart_datetime(values: pd.Series) -> pd.Series:
 
 
 def normalize_price_dataframe(df: pd.DataFrame, symbol: str = "") -> pd.DataFrame:
-    """
-    Adapted from the earlier PSX Advanced Investor Bot data loader.
-
-    It accepts many PSX/DPS field aliases, fills missing open/high/low
-    from close when necessary, and returns a CWT-engine-compatible
-    OHLCV frame with a DatetimeIndex.
-    """
     if df is None or df.empty:
         return pd.DataFrame()
 
@@ -106,10 +90,10 @@ def normalize_price_dataframe(df: pd.DataFrame, symbol: str = "") -> pd.DataFram
     }
 
     ren = {}
-    for target, cands in mapping.items():
-        col = find_column(d, cands)
+    for target_col, candidates in mapping.items():
+        col = find_column(d, candidates)
         if col is not None:
-            ren[col] = target
+            ren[col] = target_col
 
     d = d.rename(columns=ren)
 
@@ -123,7 +107,7 @@ def normalize_price_dataframe(df: pd.DataFrame, symbol: str = "") -> pd.DataFram
         if col not in d.columns:
             if col == "volume":
                 d[col] = 0
-            elif col in ["open", "high", "low"]:
+            elif col in {"open", "high", "low"}:
                 d[col] = d["close"]
             else:
                 return pd.DataFrame()
@@ -137,7 +121,6 @@ def normalize_price_dataframe(df: pd.DataFrame, symbol: str = "") -> pd.DataFram
     if d.empty:
         return pd.DataFrame()
 
-    # Return in the exact form required by the CWT bot.
     out = d.rename(columns={"date": "datetime"})[
         ["datetime", "open", "high", "low", "close", "volume"]
     ]
@@ -145,27 +128,18 @@ def normalize_price_dataframe(df: pd.DataFrame, symbol: str = "") -> pd.DataFram
 
 
 def _parse_psx_json(js: Any, symbol: str) -> pd.DataFrame:
-    """
-    Data-source parser adapted from the prior PSX Advanced Investor Bot.
-
-    Handles:
-    - dict payloads with data/chart/prices/results keys
-    - raw list payloads
-    - list[dict] rows
-    - list[list] rows
-    """
     payload = None
 
     if isinstance(js, dict):
-        for k in ["data", "chart", "prices", "results"]:
-            if k in js and js[k]:
-                payload = js[k]
+        for key in ["data", "chart", "prices", "results"]:
+            if key in js and js[key]:
+                payload = js[key]
                 break
 
         if payload is None:
-            for v in js.values():
-                if isinstance(v, list) and v:
-                    payload = v
+            for value in js.values():
+                if isinstance(value, list) and value:
+                    payload = value
                     break
 
     elif isinstance(js, list):
@@ -181,8 +155,6 @@ def _parse_psx_json(js: Any, symbol: str) -> pd.DataFrame:
         rows = []
         for item in payload:
             if len(item) >= 6:
-                # Original v11 parsing behavior:
-                # date, open, high, low, close, volume are read from the last 5 positions.
                 rows.append({
                     "date": item[0],
                     "open": item[-5],
@@ -192,8 +164,6 @@ def _parse_psx_json(js: Any, symbol: str) -> pd.DataFrame:
                     "volume": item[-1],
                 })
             elif len(item) >= 3:
-                # Typical DPS time-series form:
-                # [date/timestamp, close_or_price, volume]
                 rows.append({
                     "date": item[0],
                     "open": item[1],
@@ -209,10 +179,9 @@ def _parse_psx_json(js: Any, symbol: str) -> pd.DataFrame:
 
 
 def load_psx_data(symbol: str, interval: str = "daily", timeout: int = 12) -> pd.DataFrame:
-    """
-    Core PSX/DPS loader reused from the earlier bot and adapted for the CWT engine.
-    """
-    symbol = symbol.upper().strip()
+    symbol = str(symbol or "").upper().strip()
+    if not symbol:
+        raise RuntimeError("Empty PSX symbol")
 
     endpoints = [
         f"https://dps.psx.com.pk/timeseries/eod/{symbol}",
@@ -221,38 +190,30 @@ def load_psx_data(symbol: str, interval: str = "daily", timeout: int = 12) -> pd
     if interval == "intraday":
         endpoints = list(reversed(endpoints))
 
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json,text/plain,*/*",
+        "Connection": "close",
+    }
+
     errs = []
     for url in endpoints:
         try:
-            r = requests.get(
-                url,
-                headers={
-                    "User-Agent": "Mozilla/5.0",
-                    "Accept": "application/json,text/plain,*/*",
-                },
-                timeout=timeout,
-            )
-            r.raise_for_status()
+            response = requests.get(url, headers=headers, timeout=timeout)
+            response.raise_for_status()
 
-            df = _parse_psx_json(r.json(), symbol)
+            df = _parse_psx_json(response.json(), symbol)
             if not df.empty:
                 df.attrs["psx_source"] = url
-                if {"high", "low"}.issubset(df.columns):
-                    df.attrs["source_warning"] = (
-                        "PSX DPS data loaded. If this endpoint only provides price/volume rows, "
-                        "high/low may be synthesized from close as in the earlier PSX bot."
-                    )
                 return df
 
-            errs.append(url + ": parsed empty")
-
-        except Exception as e:
-            errs.append(url + ": " + str(e))
+            errs.append(f"{url}: parsed empty")
+        except Exception as exc:
+            errs.append(f"{url}: {exc}")
 
     raise RuntimeError("Could not fetch usable PSX data. " + " | ".join(errs))
 
 
-# Compatibility alias used by the CWT PSX app.
 def load_psx_dps_ohlcv(symbol: str, mode: str = "daily") -> pd.DataFrame:
     return load_psx_data(symbol, interval=mode)
 
@@ -260,7 +221,8 @@ def load_psx_dps_ohlcv(symbol: str, mode: str = "daily") -> pd.DataFrame:
 def _safe_yahoo_period(interval: str, period: str) -> str:
     tf = str(interval or "1d").lower().strip()
     requested = str(period or "1y").lower().strip()
-    if tf in {"1m"}:
+
+    if tf == "1m":
         return "7d"
     if tf in {"2m", "5m", "15m", "30m", "60m", "90m"}:
         return "60d"
@@ -270,14 +232,20 @@ def _safe_yahoo_period(interval: str, period: str) -> str:
 
 
 def load_psx_yahoo_ohlcv(symbol: str, interval: str, period: str) -> pd.DataFrame:
-    clean = symbol.strip().upper()
+    clean = str(symbol or "").strip().upper()
+    if not clean:
+        raise RuntimeError("Empty Yahoo symbol")
+
     yahoo_symbol = clean if clean.endswith(".KA") else f"{clean}.KA"
     requested_interval = str(interval or "1d").strip().lower()
+
     download_interval = "1h" if requested_interval == "4h" else requested_interval
     download_period = _safe_yahoo_period(requested_interval, period)
+
     df = load_yfinance_ohlcv(yahoo_symbol, interval=download_interval, period=download_period)
     if requested_interval == "4h":
         df = resample_ohlcv(df, "4h")
+
     df.attrs["source_symbol"] = yahoo_symbol
     df.attrs["download_interval"] = download_interval
     df.attrs["download_period"] = download_period
@@ -289,11 +257,9 @@ def load_psx_csv(uploaded_file: Any) -> pd.DataFrame:
 
 
 def resample_ohlcv(df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
-    """
-    Resample OHLCV if source data is finer than requested.
-    Daily data cannot create genuine intraday candles.
-    """
     rule_map = {
+        "1m": "1min",
+        "5m": "5min",
         "15m": "15min",
         "30m": "30min",
         "1h": "1h",
@@ -302,22 +268,35 @@ def resample_ohlcv(df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
         "1wk": "W-FRI",
         "1mo": "ME",
     }
-    rule = rule_map.get(timeframe)
+    rule = rule_map.get(str(timeframe or "").strip().lower())
     if rule is None:
         return df.copy()
 
-    if df.empty:
-        return df.copy()
+    if df is None or df.empty:
+        return pd.DataFrame()
+
+    work = df.copy()
+    if not isinstance(work.index, pd.DatetimeIndex):
+        if "datetime" in work.columns:
+            work["datetime"] = pd.to_datetime(work["datetime"], errors="coerce", utc=True)
+            work = work.dropna(subset=["datetime"]).set_index("datetime")
+        else:
+            return work
+
+    for col in ["open", "high", "low", "close", "volume"]:
+        if col not in work.columns:
+            return work
+        work[col] = pd.to_numeric(work[col], errors="coerce")
 
     resampled = pd.DataFrame({
-        "open": df["open"].resample(rule).first(),
-        "high": df["high"].resample(rule).max(),
-        "low": df["low"].resample(rule).min(),
-        "close": df["close"].resample(rule).last(),
-        "volume": df["volume"].resample(rule).sum(),
+        "open": work["open"].resample(rule).first(),
+        "high": work["high"].resample(rule).max(),
+        "low": work["low"].resample(rule).min(),
+        "close": work["close"].resample(rule).last(),
+        "volume": work["volume"].resample(rule).sum(),
     }).dropna(subset=["open", "high", "low", "close"])
 
-    resampled.attrs.update(df.attrs)
+    resampled.attrs.update(getattr(df, "attrs", {}))
     return resampled
 
 
@@ -325,12 +304,10 @@ def _clean_symbol_series(series: pd.Series) -> list[str]:
     symbols: list[str] = []
     for value in series.dropna().astype(str):
         sym = value.strip().upper()
-        # Keep standard exchange symbols, rights, ETFs etc.; remove obvious header repeats.
         if not sym or sym in {"SYMBOL", "NAN"}:
             continue
         if re.fullmatch(r"[A-Z0-9][A-Z0-9.\-]{0,20}", sym):
             symbols.append(sym)
-    # Preserve order while deduplicating.
     return list(dict.fromkeys(symbols))
 
 
@@ -342,17 +319,26 @@ def fetch_psx_symbol_universe(universe: str = "Eligible Scrips") -> list[str]:
     else:
         url = "https://dps.psx.com.pk/eligible-scrips"
         fallback_symbols = FALLBACK_ELIGIBLE_SYMBOLS
+
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36",
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+        ),
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Connection": "close",
     }
+
     last_error = None
     for attempt in range(3):
         try:
             response = requests.get(url, headers=headers, timeout=12)
             response.raise_for_status()
+
             tables = pd.read_html(StringIO(response.text))
+            if not tables:
+                raise RuntimeError(f"No HTML tables found on PSX universe page: {url}")
+
             for table in tables:
                 if table is None or table.empty:
                     continue
@@ -361,22 +347,18 @@ def fetch_psx_symbol_universe(universe: str = "Eligible Scrips") -> list[str]:
                         symbols = _clean_symbol_series(table[col])
                         if symbols:
                             return symbols
+
             for table in tables:
                 if table is not None and not table.empty:
                     symbols = _clean_symbol_series(table.iloc[:, 0])
                     if symbols:
                         return symbols
+
             raise RuntimeError(f"Could not extract symbols from PSX universe page: {url}")
-        except Exception as exc:
-            last_error = exc
-            time.sleep(0.75 * (attempt + 1))
-    print(f"PSX universe fetch failed, using built-in fallback for {universe}: {last_error}")
-    return list(dict.fromkeys(fallback_symbols))
 
         except Exception as exc:
             last_error = exc
             time.sleep(0.75 * (attempt + 1))
 
-    # Do not crash the scanner when the remote site closes the connection.
-    print(f"PSX universe fetch failed, using built-in fallback for {universe}: {last_error}")
+    print(f"PSX universe fetch failed, using fallback list for {universe}: {last_error}")
     return list(dict.fromkeys(fallback_symbols))
