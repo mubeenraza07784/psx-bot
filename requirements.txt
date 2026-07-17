@@ -14,3 +14,6 @@ scipy==1.14.1
 scikit-learn==1.5.2
 python-dateutil==2.9.0.post0
 pytz==2024.2
+pdfplumber==0.11.4
+pdfminer.six==20231228
+pypdfium2==4.30.0
