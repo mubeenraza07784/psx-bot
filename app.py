@@ -2979,7 +2979,8 @@ def multi_style_trading_desk_panel():
     fetch_live_news = c3.checkbox("Fetch live official news/announcements", value=True, key="v40_style_fetch_news")
     use_prediction = c4.checkbox("Use prediction risk filter", value=True, key="v40_style_predict")
 
-    with st.expander("Risk, RR, and Position Controls", expanded=True):
+    with st.container(border=True):
+        st.markdown("### Risk, RR, and Position Controls")
         r1, r2, r3, r4 = st.columns(4)
         account_balance = r1.number_input("Capital", value=100000.0, min_value=1.0, step=10000.0, key="v40_style_capital")
         risk_pct = r2.number_input("Risk %", value=float(profile["default_risk_pct"]), min_value=0.05, max_value=5.0, step=0.05, key="v40_style_risk")
