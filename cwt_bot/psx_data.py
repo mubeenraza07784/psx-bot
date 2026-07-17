@@ -257,11 +257,30 @@ def load_psx_dps_ohlcv(symbol: str, mode: str = "daily") -> pd.DataFrame:
     return load_psx_data(symbol, interval=mode)
 
 
+def _safe_yahoo_period(interval: str, period: str) -> str:
+    tf = str(interval or "1d").lower().strip()
+    requested = str(period or "1y").lower().strip()
+    if tf in {"1m"}:
+        return "7d"
+    if tf in {"2m", "5m", "15m", "30m", "60m", "90m"}:
+        return "60d"
+    if tf in {"1h", "4h"}:
+        return "6mo" if requested in {"1y", "2y", "5y", "max"} else requested
+    return requested
+
+
 def load_psx_yahoo_ohlcv(symbol: str, interval: str, period: str) -> pd.DataFrame:
     clean = symbol.strip().upper()
     yahoo_symbol = clean if clean.endswith(".KA") else f"{clean}.KA"
-    df = load_yfinance_ohlcv(yahoo_symbol, interval=interval, period=period)
+    requested_interval = str(interval or "1d").strip().lower()
+    download_interval = "1h" if requested_interval == "4h" else requested_interval
+    download_period = _safe_yahoo_period(requested_interval, period)
+    df = load_yfinance_ohlcv(yahoo_symbol, interval=download_interval, period=download_period)
+    if requested_interval == "4h":
+        df = resample_ohlcv(df, "4h")
     df.attrs["source_symbol"] = yahoo_symbol
+    df.attrs["download_interval"] = download_interval
+    df.attrs["download_period"] = download_period
     return df
 
 
@@ -316,10 +335,6 @@ def _clean_symbol_series(series: pd.Series) -> list[str]:
 
 
 def fetch_psx_symbol_universe(universe: str = "Eligible Scrips") -> list[str]:
-    # Fetch PSX symbol universe with retry and a built-in fallback.
-    # Streamlit Cloud sometimes receives:
-    # RemoteDisconnected('Remote end closed connection without response')
-    # from PSX/DPS pages. That should not crash Scenario Scanner.
     normalized = str(universe or "").strip().lower()
     if "kse" in normalized:
         url = "https://dps.psx.com.pk/indices/KSE100"
@@ -327,28 +342,17 @@ def fetch_psx_symbol_universe(universe: str = "Eligible Scrips") -> list[str]:
     else:
         url = "https://dps.psx.com.pk/eligible-scrips"
         fallback_symbols = FALLBACK_ELIGIBLE_SYMBOLS
-
     headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/124.0 Safari/537.36"
-        ),
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Connection": "close",
     }
-
     last_error = None
     for attempt in range(3):
         try:
             response = requests.get(url, headers=headers, timeout=12)
             response.raise_for_status()
-
             tables = pd.read_html(StringIO(response.text))
-            if not tables:
-                raise RuntimeError(f"No HTML tables found on PSX universe page: {url}")
-
-            # Prefer a table with a Symbol-like column.
             for table in tables:
                 if table is None or table.empty:
                     continue
@@ -357,15 +361,17 @@ def fetch_psx_symbol_universe(universe: str = "Eligible Scrips") -> list[str]:
                         symbols = _clean_symbol_series(table[col])
                         if symbols:
                             return symbols
-
-            # Fallback to first column of first non-empty table.
             for table in tables:
                 if table is not None and not table.empty:
                     symbols = _clean_symbol_series(table.iloc[:, 0])
                     if symbols:
                         return symbols
-
             raise RuntimeError(f"Could not extract symbols from PSX universe page: {url}")
+        except Exception as exc:
+            last_error = exc
+            time.sleep(0.75 * (attempt + 1))
+    print(f"PSX universe fetch failed, using built-in fallback for {universe}: {last_error}")
+    return list(dict.fromkeys(fallback_symbols))
 
         except Exception as exc:
             last_error = exc

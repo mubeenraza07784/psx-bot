@@ -3501,7 +3501,7 @@ def scenario_scanner_panel():
         index=0,
         key="v20_scenario_universe",
     )
-    max_symbols = c3.number_input("Max symbols (0 = all)", value=0, min_value=0, step=25, key="v20_scenario_max")
+    max_symbols = c3.number_input("Max symbols (0 = all)", value=25, min_value=0, step=25, key="v20_scenario_max")
 
     custom_symbols_text = ""
     if universe == "Custom Symbols":
@@ -3518,9 +3518,9 @@ def scenario_scanner_panel():
         index=0,
         key="v20_scenario_source",
     )
-    analysis_tf = d2.selectbox("Analysis TF", ANALYSIS_TIMEFRAME_SELECTOR_OPTIONS, index=0, key="v20_scenario_atf")
-    execution_tf = d3.selectbox("Execution TF", TIMEFRAME_SELECTOR_OPTIONS, index=0, key="v20_scenario_etf")
-    period = d4.selectbox("Yahoo Period", ["3mo", "6mo", "1y", "2y", "5y"], index=3, key="v20_scenario_period")
+    analysis_tf = d2.selectbox("Analysis TF", ANALYSIS_TIMEFRAME_SELECTOR_OPTIONS, index=1, key="v20_scenario_atf")
+    execution_tf = d3.selectbox("Execution TF", TIMEFRAME_SELECTOR_OPTIONS, index=1, key="v20_scenario_etf")
+    period = d4.selectbox("Yahoo Period", ["3mo", "6mo", "1y", "2y", "5y"], index=2, key="v20_scenario_period")
 
     e1, e2, e3 = st.columns(3)
     dps_mode = e1.selectbox("DPS Mode", ["daily", "intraday"], index=0, key="v20_scenario_dps")
@@ -3603,11 +3603,44 @@ def scenario_scanner_panel():
             m3.metric("Unavailable", len(failures))
 
             st.subheader(f"{scenario_system} • {selected_scenario} Matches — Ranked by PRO Score / Timeframe")
+            min_score = st.slider("Filter minimum PRO Score", 0, 100, 0, key="v20_scenario_min_score")
+
             if matched_df.empty:
-                st.info("No symbols matched this scenario.")
+                st.warning("No exact scenario match found with the current strict rules.")
+                st.caption("Showing nearest analysed candidates instead, so the scanner always gives an answer.")
+
+                if isinstance(all_df, pd.DataFrame) and not all_df.empty:
+                    candidate_df = all_df.copy()
+                    if "Pro Score" in candidate_df.columns:
+                        candidate_df["_Rank Score"] = pd.to_numeric(candidate_df["Pro Score"], errors="coerce").fillna(0)
+                    else:
+                        candidate_df["_Rank Score"] = 0
+                    if "Confidence" in candidate_df.columns:
+                        candidate_df["_Rank Score"] = candidate_df["_Rank Score"] + pd.to_numeric(candidate_df["Confidence"], errors="coerce").fillna(0) / 10
+
+                    candidate_df = candidate_df.sort_values("_Rank Score", ascending=False).head(50)
+                    show_cols = [c for c in [
+                        "Symbol", "Analysis TF", "Execution TF", "Scenario", "Scenario Detail", "Scenario Side",
+                        "Bias", "Action", "Setup", "Confidence", "Pro Score", "Grade", "Trade Quality",
+                        "Risk", "Momentum", "RSI", "ADX", "Vol Ratio", "Higher Trend", "Execution Trend",
+                        "Alligator", "Divergence", "Order", "Entry", "SL", "TP 1:3", "Warnings"
+                    ] if c in candidate_df.columns]
+
+                    st.info("Nearest Scenario Candidates / Full Analysis Result")
+                    st.dataframe(candidate_df[show_cols] if show_cols else candidate_df, use_container_width=True, hide_index=True)
+                    st.download_button(
+                        "Download Nearest Scenario Candidates CSV",
+                        candidate_df.drop(columns=["_Rank Score"], errors="ignore").to_csv(index=False).encode("utf-8"),
+                        file_name=f"psx_{selected_scenario.lower().replace(' ', '_')}_nearest_candidates.csv",
+                        mime="text/csv",
+                        use_container_width=True,
+                    )
+                else:
+                    st.error("No symbols were successfully analysed.")
+                    st.caption("This usually means data loading failed for every symbol. Check the failed/unavailable symbols section below.")
             else:
-                min_score = st.slider("Filter minimum PRO Score", 0, 100, 0, key="v20_scenario_min_score")
                 filtered = matched_df[matched_df["Pro Score"].fillna(0) >= min_score] if "Pro Score" in matched_df.columns else matched_df
+                st.success(f"Exact matches found: {len(filtered)}")
                 st.dataframe(filtered, use_container_width=True, hide_index=True)
                 st.download_button(
                     "Download Scenario Matches CSV",

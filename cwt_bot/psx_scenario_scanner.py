@@ -84,8 +84,20 @@ def scan_psx_for_scenario(
 
         try:
             if data_source == "Yahoo Finance PSX (.KA)":
-                higher_df = load_psx_yahoo_ohlcv(symbol, interval=analysis_tf, period=period)
-                lower_df = load_psx_yahoo_ohlcv(symbol, interval=execution_tf, period=period)
+                try:
+                    if str(analysis_tf).strip().lower() == str(execution_tf).strip().lower():
+                        higher_df = load_psx_yahoo_ohlcv(symbol, interval=analysis_tf, period=period)
+                        lower_df = higher_df.copy()
+                    else:
+                        higher_df = load_psx_yahoo_ohlcv(symbol, interval=analysis_tf, period=period)
+                        lower_df = load_psx_yahoo_ohlcv(symbol, interval=execution_tf, period=period)
+                except Exception as yahoo_exc:
+                    try:
+                        base_df = load_psx_dps_ohlcv(symbol, mode=dps_mode)
+                        higher_df = resample_ohlcv(base_df, analysis_tf)
+                        lower_df = resample_ohlcv(base_df, execution_tf)
+                    except Exception as dps_exc:
+                        raise RuntimeError(f"Yahoo failed: {yahoo_exc}; DPS fallback failed: {dps_exc}")
             else:
                 base_df = load_psx_dps_ohlcv(symbol, mode=dps_mode)
                 higher_df = resample_ohlcv(base_df, analysis_tf)
