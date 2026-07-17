@@ -3,12 +3,36 @@ from __future__ import annotations
 from typing import Any, List, Optional
 from io import StringIO
 import re
+import time
 
 import numpy as np
 import pandas as pd
 import requests
 
 from .data_sources import normalize_ohlcv, load_yfinance_ohlcv
+
+
+
+# Built-in fallback universe used when PSX/Yahoo closes a connection on Streamlit Cloud.
+# This is not claimed to be the latest official KSE-100 list; it is a safe starter universe
+# so the scanner keeps running even when the remote universe page is temporarily unavailable.
+FALLBACK_KSE100_SYMBOLS = [
+    "ABL","ABOT","AGP","AICL","AIRLINK","AKBL","APL","ATLH","ATRL","AVN",
+    "BAFL","BAHL","BOP","CHCC","COLG","DAWH","DGKC","EFERT","ENGROH","EPCL",
+    "FABL","FATIMA","FCEPL","FFC","FFBL","GHGL","HBL","HUBC","ILP","INDU",
+    "ISL","JDWS","JVDC","KOHC","LUCK","MARI","MCB","MEBL","MLCF","MTL",
+    "NBP","NESTLE","NRL","OGDC","PABC","PAEL","PIOC","POL","PPL","PSO",
+    "PSX","SAZEW","SEARL","SHFA","SRVI","SYS","THALL","THCCL","TRG","UBL",
+    "UNITY"
+]
+
+FALLBACK_ELIGIBLE_SYMBOLS = list(dict.fromkeys(FALLBACK_KSE100_SYMBOLS + [
+    "AGIL","AHCL","AHL","AICL","AKDHL","ATIL","BIFO","BNL","BWHL","CENI",
+    "CNERGY","DAWN","DCR","DYNO","EFUG","ENGROH","FCSC","FECTC","FCCL","FCEL",
+    "FLYNG","GAL","GGL","GHNI","GRR","GWLC","HPL","IMAGE","JLICL","JSGCL",
+    "LSEVL","MDTL","MCBIM","NATF","NETSOL","OTSU","PAKOXY","PNSC","POWER",
+    "PTC","PTL","RCML","SAPT","SPEL","TPLI","TGL","ZAL"
+]))
 
 
 def find_column(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
@@ -292,47 +316,61 @@ def _clean_symbol_series(series: pd.Series) -> list[str]:
 
 
 def fetch_psx_symbol_universe(universe: str = "Eligible Scrips") -> list[str]:
-    """
-    Fetch a current PSX symbol universe from official PSX Data Portal pages.
-
-    Supported:
-    - Eligible Scrips: broad PSX symbol list
-    - KSE-100 Constituents: current KSE100 constituent symbols
-
-    If PSX page structure changes, the app lets the user fall back to a custom symbol list.
-    """
-    normalized = universe.strip().lower()
+    # Fetch PSX symbol universe with retry and a built-in fallback.
+    # Streamlit Cloud sometimes receives:
+    # RemoteDisconnected('Remote end closed connection without response')
+    # from PSX/DPS pages. That should not crash Scenario Scanner.
+    normalized = str(universe or "").strip().lower()
     if "kse" in normalized:
         url = "https://dps.psx.com.pk/indices/KSE100"
+        fallback_symbols = FALLBACK_KSE100_SYMBOLS
     else:
         url = "https://dps.psx.com.pk/eligible-scrips"
+        fallback_symbols = FALLBACK_ELIGIBLE_SYMBOLS
 
     headers = {
-        "User-Agent": "Mozilla/5.0 (compatible; PSX-CWT-Scenario-Scanner/1.0)",
-        "Accept": "text/html,application/xhtml+xml",
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Connection": "close",
     }
-    response = requests.get(url, headers=headers, timeout=25)
-    response.raise_for_status()
 
-    tables = pd.read_html(StringIO(response.text))
-    if not tables:
-        raise RuntimeError(f"No HTML tables found on PSX universe page: {url}")
+    last_error = None
+    for attempt in range(3):
+        try:
+            response = requests.get(url, headers=headers, timeout=12)
+            response.raise_for_status()
 
-    # Prefer a table with a Symbol-like column.
-    for table in tables:
-        if table is None or table.empty:
-            continue
-        for col in table.columns:
-            if "symbol" in str(col).strip().lower():
-                symbols = _clean_symbol_series(table[col])
-                if symbols:
-                    return symbols
+            tables = pd.read_html(StringIO(response.text))
+            if not tables:
+                raise RuntimeError(f"No HTML tables found on PSX universe page: {url}")
 
-    # Fallback to first column of first non-empty table.
-    for table in tables:
-        if table is not None and not table.empty:
-            symbols = _clean_symbol_series(table.iloc[:, 0])
-            if symbols:
-                return symbols
+            # Prefer a table with a Symbol-like column.
+            for table in tables:
+                if table is None or table.empty:
+                    continue
+                for col in table.columns:
+                    if "symbol" in str(col).strip().lower():
+                        symbols = _clean_symbol_series(table[col])
+                        if symbols:
+                            return symbols
 
-    raise RuntimeError(f"Could not extract symbols from PSX universe page: {url}")
+            # Fallback to first column of first non-empty table.
+            for table in tables:
+                if table is not None and not table.empty:
+                    symbols = _clean_symbol_series(table.iloc[:, 0])
+                    if symbols:
+                        return symbols
+
+            raise RuntimeError(f"Could not extract symbols from PSX universe page: {url}")
+
+        except Exception as exc:
+            last_error = exc
+            time.sleep(0.75 * (attempt + 1))
+
+    # Do not crash the scanner when the remote site closes the connection.
+    print(f"PSX universe fetch failed, using built-in fallback for {universe}: {last_error}")
+    return list(dict.fromkeys(fallback_symbols))
